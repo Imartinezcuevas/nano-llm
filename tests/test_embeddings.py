@@ -1,6 +1,6 @@
 import pytest
 import torch
-from nano-llm.embeddings import TokenEmbedding
+from nano_llm.embeddings import TokenEmbedding
 
 def test_embedding_shape():
     vocab, d_model = 10, 16
@@ -33,7 +33,7 @@ def test_embedding_out_of_range():
     emb = TokenEmbedding(vocab, d_model)
     x = torch.tensor([0, 9, 10])
     
-    with pytest.raises(RuntimeError):
+    with pytest.raises(IndexError):
         emb(x)
 
 def test_matches_nn_embedding():
