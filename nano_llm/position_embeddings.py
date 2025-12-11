@@ -8,4 +8,7 @@ class PositionEmbedding(nn.Module):
 
     def forward(self, x):
         seq_len = x.size(0)
+        if seq_len > self.weight.size(0):
+            raise IndexError(f"""Sequence length {seq_len}
+                             exceeds maximum {self.weight.size(0)}""")
         return self.weight[:seq_len, :]
