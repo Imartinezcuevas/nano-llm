@@ -32,7 +32,7 @@ def test_embedding_out_of_range():
     vocab, d_model = 10, 16
     emb = TokenEmbedding(vocab, d_model)
     x = torch.tensor([0, 9, 10])
-    
+
     with pytest.raises(IndexError):
         emb(x)
 

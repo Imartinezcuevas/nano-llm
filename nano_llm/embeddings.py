@@ -1,9 +1,9 @@
 """
 An embedding is a learneable lookup tabla that maps token IDs
-to dense vectors. It's just a trainable matriz of shape 
-[vocab_size, d_model] where each row is the representation of one token. 
+to dense vectors. It's just a trainable matriz of shape
+[vocab_size, d_model] where each row is the representation of one token.
 
-The forward pass does nothing but index into that matrix. 
+The forward pass does nothing but index into that matrix.
 The updates happen during backprop, not in the forward.
 """
 
