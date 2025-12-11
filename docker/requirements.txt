@@ -1,3 +1,5 @@
 torch==2.2.0
 pytest==8.0.0
 numpy
+ruff
+mypy
