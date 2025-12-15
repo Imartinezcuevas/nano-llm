@@ -33,23 +33,31 @@ class MultiHeadAttention(nn.Module):
         return q, k, v
     
     def forward(self, x: torch.Tensor):
+        B, T, D = x.shape
+
         q, k, v = self.project_qkv(x)
 
-        attn_out = scaled_dot_product_attention(q, k, v)
+        mask = torch.tril(torch.ones(T, T, device=x.device))
+        attn_out = scaled_dot_product_attention(q, k, v, mask)
 
         #concatenate heads: (B, num_heads, T, d_head) -> (B, T, d_model)
         B, num_heads, T, d_head = attn_out.shape
-        out = attn_out.transpose(1, 2).contiguous().view(B, T, num_heads * d_head)
+        attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, D)
 
         # output projection
-        out = self.out_proj(out)
+        out = self.out_proj(attn_out)
 
         return out
 
-def scaled_dot_product_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor):
+def scaled_dot_product_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, mask: torch.Tensor):
     d_k = q.size(-1)
 
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+
+    # apply mask if provided
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+
     attn = torch.softmax(scores, dim=-1)
     out = torch.matmul(attn, v)
 
