@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import math
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model:int, num_heads:int):
@@ -29,6 +30,11 @@ class MultiHeadAttention(nn.Module):
 
         return q, k, v
 
-    def scaled_dot_product_attention(self, q: nn.Linear, k: nn.Linear, v: nn.Linear):
-        pass
+def scaled_dot_product_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor):
+    d_k = q.size(-1)
 
+    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+    attn = torch.softmax(scores, dim=-1)
+    out = torch.matmul(attn, v)
+
+    return out
