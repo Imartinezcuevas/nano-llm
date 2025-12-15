@@ -17,6 +17,8 @@ class MultiHeadAttention(nn.Module):
         self.k_proj = nn.Linear(d_model, d_model)
         self.v_proj = nn.Linear(d_model, d_model)
 
+        self.out_proj = nn.Linear(d_model, d_model)
+
     def project_qkv(self, x: torch.Tensor):
         B, T, D = x.shape
 
@@ -29,6 +31,20 @@ class MultiHeadAttention(nn.Module):
         v = v.view(B, T, self.num_heads, self.d_head).transpose(1, 2)
 
         return q, k, v
+    
+    def forward(self, x: torch.Tensor):
+        q, k, v = self.project_qkv(x)
+
+        attn_out = scaled_dot_product_attention(q, k, v)
+
+        #concatenate heads: (B, num_heads, T, d_head) -> (B, T, d_model)
+        B, num_heads, T, d_head = attn_out.shape
+        out = attn_out.transpose(1, 2).contiguous().view(B, T, num_heads * d_head)
+
+        # output projection
+        out = self.out_proj(out)
+
+        return out
 
 def scaled_dot_product_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor):
     d_k = q.size(-1)
