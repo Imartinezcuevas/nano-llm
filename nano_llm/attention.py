@@ -95,7 +95,7 @@ class MultiHeadAttention(nn.Module):
         else:
             mask = mask.bool()
 
-        attn_out = self.scaled_dot_product_attention(q, k, v, mask)
+        attn_out = scaled_dot_product_attention(q, k, v, mask)
 
         #concatenate heads: (B, num_heads, T, d_head) -> (B, T, d_model)
         B, num_heads, T, d_head = attn_out.shape
