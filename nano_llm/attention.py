@@ -9,6 +9,7 @@ heads, and then combined via scaled dot-product attention.
 import torch
 import torch.nn as nn
 import math
+from typing import Optional
 
 
 class MultiHeadAttention(nn.Module):
@@ -22,14 +23,15 @@ class MultiHeadAttention(nn.Module):
         Args:
             d_model (int): Dimensionality of input and output embeddings.
             num_heads (int): Number of attention heads.
-            dropout (float, optional): Dropout probability applied to attention weights. Default: 0.0
+            dropout (float, optional): Dropout probability applied to attention
+                weights. Default: 0.0
 
         Shape:
             - Input: Tensor of shape (B, T, D) where
                 B = batch size
                 T = sequence length
                 D = d_model
-            - Padding mask (optional): BoolTensor of shape (B, T), True = keep, False = pad
+            - Padding mask (optional): BoolTensor of shape (B, T), True=keep, False=pad
             - Output: Tensor of shape (B, T, D), same as input, after self-attention.
         """
         super().__init__()
@@ -70,8 +72,8 @@ class MultiHeadAttention(nn.Module):
         v = v.view(B, T, self.num_heads, self.d_head).transpose(1, 2)
 
         return q, k, v
-    
-    def forward(self, x: torch.Tensor, padding_mask:torch.Tensor=None):
+
+    def forward(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor]=None):
         """
         Compute multi-head self-attention.
 
@@ -104,27 +106,32 @@ class MultiHeadAttention(nn.Module):
 
         return out
 
-    def scaled_dot_product_attention(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, mask: torch.Tensor):
-        """
-        Compute scaled dot-product attention via optimal masking.
+def scaled_dot_product_attention(q: torch.Tensor,
+                                 k: torch.Tensor,
+                                 v: torch.Tensor,
+                                 mask: Optional[torch.Tensor] = None,
+                                 dropout: Optional[nn.Dropout] = None):
+    """
+    Compute scaled dot-product attention via optimal masking.
 
-        Args:
-            q, k, v (Tensor): Queries, Keys, Values of shape (B, num_heads, T, d_head)
-            mask (BoolTensor, optional): Mask tensor of shape (B, num_heads, T, T)
+    Args:
+        q, k, v (Tensor): Queries, Keys, Values of shape (B, num_heads, T, d_head)
+        mask (BoolTensor, optional): Mask tensor of shape (B, num_heads, T, T)
 
-        Returns:
-            Tensor: Attention output, same shape as q (B, num_heads, T, d_head)
-        """
-        d_k = q.size(-1)
+    Returns:
+        Tensor: Attention output, same shape as q (B, num_heads, T, d_head)
+    """
+    d_k = q.size(-1)
 
-        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
 
-        # apply mask if provided
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, float('-inf'))
+    # apply mask if provided
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, float('-inf'))
 
-        attn = torch.softmax(scores, dim=-1)
-        attn = self.attn_dropout(attn)
-        out = torch.matmul(attn, v)
+    attn = torch.softmax(scores, dim=-1)
+    if dropout is not None:
+        attn = dropout(attn)
+    out = torch.matmul(attn, v)
 
-        return out
+    return out
