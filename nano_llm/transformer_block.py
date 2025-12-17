@@ -4,7 +4,7 @@ Single transformer block with self-attention and feedforward network.
 
 import torch
 import torch.nn as nn
-from typing import Optional
+from typing import Optional, Tuple
 from nano_llm.attention import MultiHeadAttention
 
 class TransformerBlock(nn.Module):
@@ -37,7 +37,10 @@ class TransformerBlock(nn.Module):
         self.ln2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor] = None):
+    def forward(self,
+                x: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                past_kv: Optional[Tuple[torch.Tensor, torch.Tensor]]=None):
         """
         Forward pass for a single Transformer block.
 
@@ -48,10 +51,10 @@ class TransformerBlock(nn.Module):
         Returns:
             Tensor: Output embeddings, shape (B, T, d_model)
         """
-        attn_out = self.mha(x, padding_mask=padding_mask)
-        x = self.ln1(x + self.dropout(attn_out))
+        attn_out, present_kv = self.mha(x, padding_mask=padding_mask, past_kv=past_kv)
+        h = self.ln1(x + self.dropout(attn_out))
 
-        ff_out = self.ff(x)
-        x = self.ln1(x + self.dropout(ff_out))
+        ff_out = self.ff(h)
+        x = self.ln2(h + self.dropout(ff_out))
 
-        return x
+        return x, present_kv

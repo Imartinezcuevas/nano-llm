@@ -9,7 +9,7 @@ heads, and then combined via scaled dot-product attention.
 import torch
 import torch.nn as nn
 import math
-from typing import Optional
+from typing import Optional, Tuple
 
 
 class MultiHeadAttention(nn.Module):
@@ -73,29 +73,52 @@ class MultiHeadAttention(nn.Module):
 
         return q, k, v
 
-    def forward(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor]=None):
+    def forward(self,
+                x: torch.Tensor,
+                padding_mask: Optional[torch.Tensor]=None,
+                past_kv: Optional[Tuple[torch.Tensor, torch.Tensor]]=None):
         """
         Compute multi-head self-attention.
 
         Args:
             x (Tensor): Input embedding of shape (B, T, D)
             padding_mask (BoolTensor, optional): Mask for padded tokens, shape (B, T)
+            past_kv (Tensor): tuple of (k_prev, v_prev) each
+                (B, num_heads, T_prev, d_head)
 
         Returns:
             Tensor: Output embeddings after self-attention, shape (B, T, D)
+            present_kv: (k, v) including previous
         """
         B, T, D = x.shape
 
         q, k, v = self.project_qkv(x)
 
-        mask = torch.tril(torch.ones(T, T, device=x.device)).unsqueeze(0).unsqueeze(0)
-        if padding_mask is not None:
-            padding_mask = padding_mask[:, None, None, :]
-            mask = mask.bool() & padding_mask
-        else:
-            mask = mask.bool()
+        if past_kv is not None:
+            k_prev, v_prev = past_kv
+            k = torch.cat([k_prev, k], dim=2)
+            v = torch.cat([v_prev, v], dim=2)
+        present_kv = (k, v)
 
-        attn_out = scaled_dot_product_attention(q, k, v, mask)
+        total_len = k.size(2)
+        mask = torch.tril(
+            torch.ones(T, total_len, device=x.device)
+        ).unsqueeze(0).unsqueeze(0).bool()
+
+        if padding_mask is not None:
+            # Extend padding mask for past tokens
+            if past_kv is not None:
+                pad = torch.ones(
+                    B,
+                    past_kv[0].size(2),
+                    device=x.device,
+                    dtype=torch.bool
+                )
+                padding_mask = torch.cat([pad, padding_mask], dim=1)
+            padding_mask = padding_mask[:, None, None, :]
+            mask = mask & padding_mask
+
+        attn_out = scaled_dot_product_attention(q, k, v, mask, self.attn_dropout)
 
         #concatenate heads: (B, num_heads, T, d_head) -> (B, T, d_model)
         B, num_heads, T, d_head = attn_out.shape
@@ -104,7 +127,7 @@ class MultiHeadAttention(nn.Module):
         # output projection
         out = self.out_proj(attn_out)
 
-        return out
+        return out, present_kv
 
 def scaled_dot_product_attention(q: torch.Tensor,
                                  k: torch.Tensor,
