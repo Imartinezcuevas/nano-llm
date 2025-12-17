@@ -5,6 +5,16 @@ from nano_llm.position_embeddings import PositionEmbedding
 from nano_llm.transformer_block import TransformerBlock
 
 class MiniTransformer(nn.Module):
+    """
+    Decoder-only transformer model.
+
+    This module implements a minimal Transformer model composed of token and
+    positional embeddings, a stack of Transformer blocks with causal
+    self-attention, and a final linear projection to vocab logits.
+
+    The model operates on token indices and returns unnormalized
+    logits for each position in the input sequence.
+    """
     def __init__(
         self,
         vocab_size: int,
@@ -36,6 +46,15 @@ class MiniTransformer(nn.Module):
         self.head = nn.Linear(d_model, vocab_size, bias=False)
 
     def forward(self, x: torch.Tensor):
+        """
+        Forward pass of the Transformer.
+
+        Args:
+            x (LongTensor): Input token indices of shape (B, T).
+
+        Returns:
+            Tensor: Logits of shape (B, T, vocab_size)
+        """
         B, T = x.shape
         device = x.device
 
