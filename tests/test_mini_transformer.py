@@ -16,7 +16,7 @@ def test_mini_transformer_output_shape():
         max_len=16,
     )
 
-    out = model(x)
+    out, _ = model(x)
     assert out.shape == (B, T, vocab_size)
 
 def test_mini_transformer_causal_consistency():
@@ -36,8 +36,8 @@ def test_mini_transformer_causal_consistency():
     )
     model.eval()
 
-    out1 = model(x1)
-    out2 = model(x2)
+    out1, _ = model(x1)
+    out2, _ = model(x2)
 
     assert torch.allclose(out1[:,:2], out2[:, :2], atol=1e-6)
 
@@ -56,7 +56,7 @@ def test_mini_transformer_deterministic_eval():
     )
     model.eval()
 
-    out1 = model(x)
-    out2 = model(x)
+    out1, _ = model(x)
+    out2, _ = model(x)
 
     assert torch.allclose(out1, out2)

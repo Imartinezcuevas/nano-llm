@@ -55,3 +55,19 @@ def test_generate_prefix_preserved():
     out = generate(model, x, max_new_tokens=4)
 
     assert torch.equal(out[:, :3], x)
+
+def test_generation_sampling_topk_topp():
+    B, T, D = 1, 2, 16
+    vocab_size = 20
+    model = MiniTransformer(
+        d_model=D,
+        num_heads=2,
+        ff_hidden=32,
+        vocab_size=vocab_size,
+        num_layers=1,
+        max_len=10
+    )
+    x = torch.randint(0, vocab_size, (B, T))
+    out = generate(model, x, max_new_tokens=5, temperature=1.0, top_k=5, top_p=0.9)
+    assert out.shape == (B, T + 5)
+

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from typing import Optional, List, Tuple
 from nano_llm.embeddings import TokenEmbedding
 from nano_llm.position_embeddings import PositionEmbedding
 from nano_llm.transformer_block import TransformerBlock
@@ -45,15 +46,23 @@ class MiniTransformer(nn.Module):
         self.ln_f = nn.LayerNorm(d_model)
         self.head = nn.Linear(d_model, vocab_size, bias=False)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self,
+                x: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                past_kvs: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None
+    ):
         """
         Forward pass of the Transformer.
 
         Args:
             x (LongTensor): Input token indices of shape (B, T).
+            padding_mask (BoolTensor, optional): Mask for padded tokens, shape (B, T)
+            past_kvs (List, optional): list of (k, v) tuples from previous steps,
+                one per block
 
         Returns:
             Tensor: Logits of shape (B, T, vocab_size)
+            new_past_kvs: updated past key/values for each block
         """
         B, T = x.shape
         device = x.device
@@ -64,10 +73,13 @@ class MiniTransformer(nn.Module):
 
         h = tok_emb + pos_emb
 
-        for block in self.blocks:
-            h = block(h)
+        new_past_kvs = []
+        for i, block in enumerate(self.blocks):
+            block_past_kv = past_kvs[i] if past_kvs is not None else None
+            h, present_kv = block(h, padding_mask=padding_mask, past_kv=block_past_kv)
+            new_past_kvs.append(present_kv)
 
         h = self.ln_f(h)
         logits = self.head(h)
 
-        return logits
+        return logits, new_past_kvs
