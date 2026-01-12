@@ -3,6 +3,10 @@ This repository implements a minimal decoder-only Transformer, inspired by GPT a
 
 The goal of this project is to understand and implement the core concepts of a modern LLM from first priciples, without relying on high-level libraries.
 
+## Blogs
+- [Why GPTs Are Decoder-Only](https://imartinezcuevas.github.io/posts/why-gpts-are-decoder-only/)  
+  Explains why modern GPT models use a decoder-only Transformer.
+
 ## Objectives
 
 ### 1. Embeddings
