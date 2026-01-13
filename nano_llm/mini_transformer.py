@@ -38,6 +38,7 @@ class MiniTransformer(nn.Module):
                     num_heads=num_heads,
                     ff_hidden=ff_hidden,
                     dropout=dropout,
+                    is_causal=True
                 )
                 for _ in range(num_layers)
             ]

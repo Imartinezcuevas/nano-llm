@@ -1,5 +1,4 @@
 services:
-  
   dev:
     build:
       context: .
@@ -7,4 +6,6 @@ services:
     volumes:
       - .:/app
     working_dir: /app
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1  # <--- AÑADE ESTO
     command: docker/run_checks.sh
