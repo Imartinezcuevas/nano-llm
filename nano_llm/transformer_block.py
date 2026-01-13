@@ -8,7 +8,12 @@ from typing import Optional, Tuple
 from nano_llm.attention import MultiHeadAttention
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model:int, num_heads:int, ff_hidden:int, dropout:float=0.0):
+    def __init__(self,
+                 d_model:int,
+                 num_heads:int,
+                 ff_hidden:int,
+                 dropout:float=0.0,
+                 is_causal:bool=True):
         """
         Features:
             - Multi-head self-attention with causal masking.
@@ -26,7 +31,8 @@ class TransformerBlock(nn.Module):
 
         self.mha = MultiHeadAttention(d_model=d_model,
                                       num_heads=num_heads,
-                                      dropout=dropout)
+                                      dropout=dropout,
+                                      is_causal=is_causal)
         self.ln1 = nn.LayerNorm(d_model)
 
         self.ff = nn.Sequential(

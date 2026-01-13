@@ -1,8 +1,8 @@
 '''
 Multi-Head self-attention layer.
 
-This module implements de core self-attention mechanism used in Transformers.
-Each input token is projected into queries, keys and values, split across multiple
+This module implements the core self-attention mechanism used in Transformers.
+Each input token is projected into queries, keys, and values, split across multiple
 heads, and then combined via scaled dot-product attention.
 '''
 
@@ -13,7 +13,11 @@ from typing import Optional, Tuple
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model:int, num_heads:int, dropout:float=0.0):
+    def __init__(self,
+                 d_model: int,
+                 num_heads: int,
+                 dropout: float = 0.0,
+                 is_causal: bool = True):
         """
         Features:
             - Supports causal (autoregressive) attention with a lower-triangular mask.
@@ -25,6 +29,7 @@ class MultiHeadAttention(nn.Module):
             num_heads (int): Number of attention heads.
             dropout (float, optional): Dropout probability applied to attention
                 weights. Default: 0.0
+            is_causal (bool): Whether to use causal masking. Default: True
 
         Shape:
             - Input: Tensor of shape (B, T, D) where
@@ -48,6 +53,7 @@ class MultiHeadAttention(nn.Module):
         self.v_proj = nn.Linear(d_model, d_model)
 
         self.attn_dropout = nn.Dropout(dropout)
+        self.is_causal = is_causal
 
         self.out_proj = nn.Linear(d_model, d_model)
 
@@ -75,15 +81,15 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self,
                 x: torch.Tensor,
-                padding_mask: Optional[torch.Tensor]=None,
-                past_kv: Optional[Tuple[torch.Tensor, torch.Tensor]]=None):
+                padding_mask: Optional[torch.Tensor] = None,
+                past_kv: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         Compute multi-head self-attention.
 
         Args:
             x (Tensor): Input embedding of shape (B, T, D)
             padding_mask (BoolTensor, optional): Mask for padded tokens, shape (B, T)
-            past_kv (Tensor): tuple of (k_prev, v_prev) each
+            past_kv (tuple, optional): tuple of (k_prev, v_prev) each
                 (B, num_heads, T_prev, d_head)
 
         Returns:
@@ -91,7 +97,6 @@ class MultiHeadAttention(nn.Module):
             present_kv: (k, v) including previous
         """
         B, T, D = x.shape
-
         q, k, v = self.project_qkv(x)
 
         if past_kv is not None:
@@ -100,34 +105,48 @@ class MultiHeadAttention(nn.Module):
             v = torch.cat([v_prev, v], dim=2)
         present_kv = (k, v)
 
+        # Build attention mask
+        mask = None
         total_len = k.size(2)
-        mask = torch.tril(
-            torch.ones(T, total_len, device=x.device)
-        ).unsqueeze(0).unsqueeze(0).bool()
 
+        # Create causal mask if needed
+        if self.is_causal:
+            mask = torch.tril(
+                torch.ones(T, total_len, device=x.device, dtype=torch.bool)
+            ).unsqueeze(0).unsqueeze(0)
+
+        # Handle padding mask
         if padding_mask is not None:
-            # Extend padding mask for past tokens
             if past_kv is not None:
-                pad = torch.ones(
-                    B,
-                    past_kv[0].size(2),
-                    device=x.device,
-                    dtype=torch.bool
-                )
+                pad = torch.ones(B,
+                                 past_kv[0].size(2),
+                                 device=x.device,
+                                 dtype=torch.bool)
                 padding_mask = torch.cat([pad, padding_mask], dim=1)
-            padding_mask = padding_mask[:, None, None, :]
-            mask = mask & padding_mask
 
+            # Expand padding mask to (B, 1, 1, total_len) for broadcasting
+            # This masks out KEY positions (columns in attention matrix)
+            padding_mask = padding_mask[:, None, None, :]
+
+            if mask is None:
+                # No causal mask, only padding - use padding mask directly
+                mask = padding_mask
+            else:
+                # Combine causal and padding masks
+                mask = mask & padding_mask
+
+        # Compute attention
         attn_out = scaled_dot_product_attention(q, k, v, mask, self.attn_dropout)
 
-        #concatenate heads: (B, num_heads, T, d_head) -> (B, T, d_model)
+        # Concatenate heads: (B, num_heads, T, d_head) -> (B, T, d_model)
         B, num_heads, T, d_head = attn_out.shape
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, D)
 
-        # output projection
+        # Output projection
         out = self.out_proj(attn_out)
 
         return out, present_kv
+
 
 def scaled_dot_product_attention(q: torch.Tensor,
                                  k: torch.Tensor,
@@ -135,11 +154,14 @@ def scaled_dot_product_attention(q: torch.Tensor,
                                  mask: Optional[torch.Tensor] = None,
                                  dropout: Optional[nn.Dropout] = None):
     """
-    Compute scaled dot-product attention via optimal masking.
+    Compute scaled dot-product attention.
 
     Args:
         q, k, v (Tensor): Queries, Keys, Values of shape (B, num_heads, T, d_head)
-        mask (BoolTensor, optional): Mask tensor of shape (B, num_heads, T, T)
+        mask (Tensor, optional): Mask tensor. Can be either:
+            - BoolTensor where True=attend, False=mask out
+            - FloatTensor where 1.0=attend, 0.0=mask out
+        dropout (Dropout, optional): Dropout layer to apply to attention weights
 
     Returns:
         Tensor: Attention output, same shape as q (B, num_heads, T, d_head)
@@ -148,9 +170,14 @@ def scaled_dot_product_attention(q: torch.Tensor,
 
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
 
-    # apply mask if provided
+    # Apply mask if provided
     if mask is not None:
-        scores = scores.masked_fill(mask == 0, float('-inf'))
+        # Handle both boolean and float masks
+        if mask.dtype == torch.bool:
+            scores = scores.masked_fill(~mask, float('-inf'))
+        else:
+            # Float mask: 1.0 = attend, 0.0 = mask out
+            scores = scores.masked_fill(mask == 0, float('-inf'))
 
     attn = torch.softmax(scores, dim=-1)
     if dropout is not None:

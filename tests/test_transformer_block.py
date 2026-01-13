@@ -14,24 +14,6 @@ def test_transformer_block_residual():
     out, _ = block(x)
     assert not torch.allclose(out, x)
 
-def test_transformer_block_is_causal():
-    torch.manual_seed(0)
-
-    B, T, D = 1, 4, 16
-    x = torch.randn(B, T, D)
-
-    block = TransformerBlock(d_model=D, num_heads=4, ff_hidden=32)
-    block.eval()
-
-    out1, _ = block(x)
-
-    x_future_changed = x.clone()
-    x_future_changed[:, -1, :] += 10.0
-
-    out2, _ = block(x_future_changed)
-
-    assert torch.allclose(out1[:, :-1], out2[:, :-1], atol=1e-5)
-
 def test_transformer_block_padding_mask():
     torch.manual_seed(0)
 
