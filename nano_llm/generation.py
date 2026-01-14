@@ -30,8 +30,13 @@ def generate(
 
     with torch.no_grad():
         for _ in range(max_new_tokens):
+            if past_kvs is None:
+                x_input = generated
+            else:
+                x_input = generated[:, -1:]
+
             # Model forward with kv cache
-            logits, past_kvs = model(generated[:, -1:], past_kvs=past_kvs)
+            logits, past_kvs = model(x_input, past_kvs=past_kvs)
             # Take logits of the last token
             next_token_logits = logits[:, -1, :]
 
