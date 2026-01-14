@@ -47,4 +47,4 @@ class PositionEmbedding(nn.Module):
         if seq_len > self.weight.size(0):
             raise IndexError(f"""Sequence length {seq_len}
                              exceeds maximum {self.weight.size(0)}""")
-        return self.weight[:seq_len, :]
+        return self.weight[x]
