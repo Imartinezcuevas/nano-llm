@@ -5,14 +5,14 @@ from nano_llm.position_embeddings import PositionEmbedding
 def test_embedding_shape():
     max_len, d_model = 20, 16
     emb = PositionEmbedding(max_len, d_model)
-    x = torch.zeros(10)
+    x = torch.zeros(10, dtype=torch.long)
     out = emb(x)
     assert out.shape == (10, d_model)
 
 def test_embedding_grad():
     max_len, d_model = 20, 16
     emb = PositionEmbedding(max_len, d_model)
-    x = torch.zeros(5)
+    x = torch.zeros(5, dtype=torch.long)
 
     out = emb(x).sum()
     out.backward()

@@ -111,9 +111,14 @@ class MultiHeadAttention(nn.Module):
 
         # Create causal mask if needed
         if self.is_causal:
-            mask = torch.tril(
-                torch.ones(T, total_len, device=x.device, dtype=torch.bool)
-            ).unsqueeze(0).unsqueeze(0)
+            diff = total_len - T
+            mask = (torch.ones(T,
+                              total_len,
+                              device=x.device,
+                              dtype=torch.bool)
+                              .tril(diagonal=diff)
+                              .unsqueeze(0)
+                              .unsqueeze(0))
 
         # Handle padding mask
         if padding_mask is not None:

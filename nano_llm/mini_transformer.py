@@ -69,7 +69,10 @@ class MiniTransformer(nn.Module):
         device = x.device
 
         tok_emb = self.token_emb(x)
-        pos_ids = torch.arange(T, device=device)
+        past_len = 0
+        if past_kvs is not None:
+            past_len = past_kvs[0][0].size(2)
+        pos_ids = torch.arange(past_len, past_len + T, device=device)
         pos_emb = self.pos_emb(pos_ids)
 
         h = tok_emb + pos_emb

@@ -24,7 +24,6 @@ def generate(
     Returns:
         generated: (B, T + max_new_tokens) token indices
     """
-
     model.eval()
     generated = input_ids.clone()
     past_kvs = None
