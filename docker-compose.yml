@@ -1,5 +1,4 @@
 services:
-  
   dev:
     build:
       context: .
@@ -7,4 +6,6 @@ services:
     volumes:
       - .:/app
     working_dir: /app
-    command: pytest -q
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+    command: ["sh", "docker/run_checks.sh"]
