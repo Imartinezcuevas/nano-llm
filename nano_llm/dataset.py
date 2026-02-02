@@ -6,7 +6,8 @@ class TextDataset(Dataset):
     """
     Dataset for language modeling that provides shifted sequences.
 
-    Takes a raw text file and prepares chunks of data where the target sequence (y) is the input sequence (x) shifted by one position.
+    Takes a raw text file and prepares chunks of data where the target sequence (y)
+    is the input sequence (x) shifted by one position.
     """
     def __init__(self, data_path: str, block_size: int, tokenizer: CharTokenizer):
         """
@@ -25,7 +26,7 @@ class TextDataset(Dataset):
         Returns the total number of possible sequences that can be extracted.
         """
         return len(self.data) - self.block_size
-    
+
     def __getitem__(self, index):
         """
         Retrieves a single pair of (input, target) sequences.

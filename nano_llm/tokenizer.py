@@ -23,9 +23,9 @@ class CharTokenizer:
         Converts a string into a list of integer token IDz.
         """
         return [self.stoi[c] for c in s]
-    
-    def decode(self, l: list[int]) -> str:
+
+    def decode(self, lStrings: list[int]) -> str:
         """
         Convert a list of integer token IDs back into readable string.
         """
-        return ''.join([self.itos[i] for i in l])
+        return ''.join([self.itos[i] for i in lStrings])
