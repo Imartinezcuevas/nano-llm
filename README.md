@@ -6,6 +6,8 @@ The goal of this project is to understand and implement the core concepts of a m
 ## Blogs
 - [Why GPTs Are Decoder-Only](https://imartinezcuevas.github.io/posts/why-gpts-are-decoder-only/)  
   Explains why modern GPT models use a decoder-only Transformer.
+- [How GPTs processes tokens and KV Cache](https://imartinezcuevas.github.io/posts/gpt-flow-kv-cache/)
+  How information flows inside GPT during training and inference, explaining why autoregressive generation becomes expensive and how KV cache is used as an optimization.
 
 ## Objectives
 
@@ -57,11 +59,6 @@ The goal of this project is to understand and implement the core concepts of a m
   - Greedy decoding (`temperature=0`)
 
 ### 6. Training
-- [ ] Training loop
-- [ ] Cross-entropy loss with shift (teacher forcing)
-- [ ] Padding handling (`ignore_index`)
-- [ ] Optimizer (AdamW)
-- [ ] Gradient clipping
-- [ ] Learning rate scheduling
+- [x] Training loop
 
 
